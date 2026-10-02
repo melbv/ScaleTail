@@ -27,11 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone this repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
           
-      - name: Lint services
-        uses: rvben/rumdl@v0.2.41
+      - name: Lint Markdown
+        uses: rvben/rumdl@v0.2.73
         with:
-          path: "services/"
+          path: "."
           config: ".markdownlint.yml"
           report-type: annotations

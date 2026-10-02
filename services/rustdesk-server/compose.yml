@@ -22,7 +22,7 @@ services:
       - TS_USERSPACE=false
       - TS_ENABLE_HEALTH_CHECK=true              # Enable healthcheck endpoint: "/healthz"
       - TS_LOCAL_ADDR_PORT=127.0.0.1:41234       # The <addr>:<port> for the healthz endpoint
-      #- TS_ACCEPT_DNS=true # Uncomment when using MagicDNS
+      #- TS_ACCEPT_DNS=true # Uncomment only if the service must resolve MagicDNS names - this replaces Docker DNS, so Compose service names no longer resolve
       - TS_AUTH_ONCE=true
     configs:
       - source: ts-serve
@@ -58,13 +58,13 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=${TZ}
       - ALWAYS_USE_RELAY=${ALWAYS_USE_RELAY}
     depends_on:
       tailscale:
         condition: service_healthy
       hbbr: 
         condition: service_started
+    # Healthcheck: none possible. The image contains only the hbbs and hbbr binaries, with no shell, HTTP client, or health command.
     restart: always
 
   hbbr:
@@ -76,6 +76,6 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=${TZ}
     network_mode: service:tailscale # Sidecar configuration to route ${SERVICE} through Tailscale
+    # Healthcheck: none possible. The image contains only the hbbs and hbbr binaries, with no shell, HTTP client, or health command.
     restart: always
