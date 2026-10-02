@@ -12,6 +12,10 @@ In this setup, the `tailscale` service (container `tailscale-mail-archiver`) run
 
 The `db` service (container `app-mail-archiver-db`) runs PostgreSQL in the same network namespace, so Mail Archiver reaches it at `127.0.0.1`. The database is not exposed outside the stack.
 
+## Prerequisites
+
+The stack needs no extra user groups or devices beyond `/dev/net/tun` for the Tailscale container. Both containers start as root, so Docker can create the `mail-archiver-data` folders on the first start; you do not need to create them beforehand.
+
 ## Before the first start
 
 - Set `TS_AUTHKEY`, `APP_PW`, and `DB_PW` in `.env`. The stack does not work with empty passwords.
