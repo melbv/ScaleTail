@@ -8,22 +8,21 @@ configs:
       "AllowFunnel":{"$${TS_CERT_DOMAIN}:443":false}}
 
 services:
-  # Make sure you have updated/checked the .env file with the correct variables.
-  # All the ${ xx } need to be defined there.
+# Make sure you have updated/checked the .env file with the correct variables.
+# All the ${ xx } need to be defined there.
   # Tailscale Sidecar Configuration
   tailscale:
     image: tailscale/tailscale:latest # Image to be used
     container_name: tailscale-${SERVICE} # Name for local container management
-    hostname: tailscale-${SERVICE} # Name used within your Tailscale environment
+    hostname: ${SERVICE} # Name used within your Tailscale environment
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}
-      - TS_EXTRA_ARGS=--advertise-tags=tag:container
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_SERVE_CONFIG=/config/serve-config.json # Tailscale Serve configuration to expose the web interface on your local Tailnet - remove this line if not required
+      - TS_SERVE_CONFIG=/config/serve.json # Tailscale Serve configuration to expose the web interface on your local Tailnet - remove this line if not required
       - TS_USERSPACE=false
-      - TS_ENABLE_HEALTH_CHECK=true # Enable healthcheck endpoint: "/healthz"
-      - TS_LOCAL_ADDR_PORT=127.0.0.1:41234 # The <addr>:<port> for the healthz endpoint
-      #- TS_ACCEPT_DNS=true # Uncomment when using MagicDNS
+      - TS_ENABLE_HEALTH_CHECK=true              # Enable healthcheck endpoint: "/healthz"
+      - TS_LOCAL_ADDR_PORT=127.0.0.1:41234       # The <addr>:<port> for the healthz endpoint
+      #- TS_ACCEPT_DNS=true # Uncomment only if the service must resolve MagicDNS names - this replaces Docker DNS, so Compose service names no longer resolve
       - TS_AUTH_ONCE=true
     configs:
       - source: ts-serve
@@ -35,8 +34,6 @@ services:
       - /dev/net/tun:/dev/net/tun # Network configuration for Tailscale to work
     cap_add:
       - net_admin # Tailscale requirement
-    networks:
-      - postgres
     #ports:
     #  - 0.0.0.0:${SERVICEPORT}:${SERVICEPORT} # Binding port ${SERVICE}PORT to the local network - may be removed if only exposure to your Tailnet is required
     # If any DNS issues arise, use your preferred DNS provider by uncommenting the config below
@@ -50,65 +47,61 @@ services:
       start_period: 10s # Time to wait before starting health checks
     restart: always
 
+  # ${SERVICE}
   application:
-    image: ${IMAGE_URL}
-    container_name: ${SERVICE}-app
-    restart: always
-    network_mode: service:tailscale
-    environment:
-      # Database Connection
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${SERVICE};Username=${DB_USER};Password=${DB_PW};
-
-      # Authentication Settings
+    image: ${IMAGE_URL} # Image to be used
+    network_mode: service:tailscale # Sidecar configuration to route ${SERVICE} through Tailscale
+    container_name: app-${SERVICE} # Name for local container management
+    environment: # Variables are declared in .env file.
+      # Database connection
+      - ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=MailArchiver;Username=${DB_USER};Password=${DB_PW};
+      # First admin user
       - Authentication__Username=${APP_USER}
       - Authentication__Password=${APP_PW}
-
-      # TimeZone Settings
-      - TZ=Europe/Amsterdam
-
-      # OIDC Configuration
+      # Time zone
+      - TZ=${TZ}
+      - TimeZone__DisplayTimeZoneId=${TZ} # Time zone used for dates in the web interface
+      # OAuth/OIDC login
       - OAuth__Enabled=${OAUTH_SETUP}
       - OAuth__Authority=${OAUTH_URL}
       - OAuth__ClientId=${OAUTH_CLIENTID}
       - OAuth__ClientSecret=${OAUTH_SECRET}
-      - OAuth__DisplayName=PocketID SSO
+      - OAuth__DisplayName=${OAUTH_DISPLAYNAME}
       - OAuth__ClientScopes__0=openid
       - OAuth__ClientScopes__1=profile
       - OAuth__ClientScopes__2=email
       - OAuth__DisablePasswordLogin=false
       - OAuth__AutoApproveUsers=false
-
     volumes:
-      - ./data-protection-keys:/app/DataProtection-Keys
+      - ./${SERVICE}-data/data-protection-keys:/app/DataProtection-Keys
     depends_on:
       tailscale:
         condition: service_healthy
-      postgres:
+      db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 15s
-
-  postgres:
-    image: postgres:17-alpine
+      test: ["CMD", "pgrep", "-f", "MailArchiver.dll"] # Check if the Mail Archiver process is running; the image has no HTTP client
+      interval: 1m # How often to perform the check
+      timeout: 10s # Time to wait for the check to succeed
+      retries: 3 # Number of retries before marking as unhealthy
+      start_period: 30s # Time to wait before starting health checks
     restart: always
-    environment:
-      POSTGRES_DB: ${SERVICE}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PW}
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
-    networks:
-      - postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${SERVICE}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
-networks:
-  postgres:
+  # Database
+  db:
+    image: postgres:17-alpine # Image to be used
+    network_mode: service:tailscale # Join the same network namespace to be accessible via localhost
+    container_name: app-${SERVICE}-db # Name for local container management
+    environment:
+      - POSTGRES_DB=MailArchiver
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PW}
+    volumes:
+      - ./${SERVICE}-data/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${DB_USER} -d MailArchiver"] # Check if PostgreSQL accepts connections
+      interval: 10s # How often to perform the check
+      timeout: 5s # Time to wait for the check to succeed
+      retries: 5 # Number of retries before marking as unhealthy
+      start_period: 30s # Time to wait before starting health checks
+    restart: always
