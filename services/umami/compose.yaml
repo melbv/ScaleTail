@@ -1,15 +1,27 @@
 configs:
-  ts-serve:
+  ts-serve-private:
     content: |
       {"TCP":{"443":{"HTTPS":true}},
       "Web":{"$${TS_CERT_DOMAIN}:443":
           {"Handlers":{"/":
-          {"Proxy":"http://127.0.0.1:8080"}}}},
+          {"Proxy":"http://127.0.0.1:3000"}}}},
       "AllowFunnel":{"$${TS_CERT_DOMAIN}:443":false}}
+  ts-serve-public:
+    content: |
+      {"TCP": {"443": {"HTTPS": true}, "8443": {"HTTPS": true}},
+      "Web": {"$${TS_CERT_DOMAIN}:443":
+          {"Handlers": {"/script.js":
+          {"Proxy": "http://127.0.0.1:3000/script.js"},
+          "/api/send":
+          {"Proxy": "http://127.0.0.1:3000/api/send"}}},
+          "$${TS_CERT_DOMAIN}:8443": {
+          "Handlers": {"/":
+          {"Proxy": "http://127.0.0.1:3000/"}}}},
+      "AllowFunnel": {"$${TS_CERT_DOMAIN}:443": true, "$${TS_CERT_DOMAIN}:8443": false}}
 
 services:
 # Make sure you have updated/checked the .env file with the correct variables.
-# All the ${ xx } need to be defined there.
+# Every variable used in this file must be defined there.
   # Tailscale Sidecar Configuration
   tailscale:
     image: tailscale/tailscale:latest # Image to be used
@@ -25,7 +37,7 @@ services:
       #- TS_ACCEPT_DNS=true # Uncomment only if the service must resolve MagicDNS names - this replaces Docker DNS, so Compose service names no longer resolve
       - TS_AUTH_ONCE=true
     configs:
-      - source: ts-serve
+      - source: ts-serve-${SERVE_CONFIG}
         target: /config/serve.json
     volumes:
       - ./config:/config # Config folder used to store Tailscale files - you may need to change the path
@@ -35,10 +47,10 @@ services:
     cap_add:
       - net_admin # Tailscale requirement
     #ports:
-    #  - 0.0.0.0:${SERVICEPORT}:8080 # Binding the host port to XWiki's container port
+    #  - 0.0.0.0:${SERVICEPORT}:${SERVICEPORT} # Binding the service port to the local network - may be removed if only exposure to your Tailnet is required
     # If any DNS issues arise, use your preferred DNS provider by uncommenting the config below
-    # dns:
-    #   - ${DNS_SERVER}
+    #dns:
+    #  - ${DNS_SERVER}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:41234/healthz"] # Check Tailscale has a Tailnet IP and is operational
       interval: 1m # How often to perform the check
@@ -47,53 +59,43 @@ services:
       start_period: 10s # Time to wait before starting health checks
     restart: always
 
-# ${SERVICE}
+  # Umami
   application:
     image: ${IMAGE_URL} # Image to be used
-    network_mode: service:tailscale # Sidecar configuration to route ${SERVICE} through Tailscale
+    network_mode: service:tailscale # Sidecar configuration to route the service through Tailscale
     container_name: app-${SERVICE} # Name for local container management
+    environment: # Variables are declared in .env file.
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD:?Set DB_PASSWORD in .env}@database:5432/${DB_NAME}
+      - APP_SECRET=${APP_SECRET:?Set APP_SECRET in .env}
     depends_on:
       tailscale:
         condition: service_healthy
-      db:
+      database:
         condition: service_healthy
-    environment: # Variables are declared in .env file.
-      - XWIKI_VERSION=${XWIKI_VERSION}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_DATABASE=${DB_DATABASE}
-      - DB_HOST=db-${SERVICE}
-      - TZ=${TZ}
-    volumes:
-      - ./${SERVICE}-data/xwiki:/usr/local/xwiki
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/rest/"] # Check if the service is responding
-      interval: 1m # How often to perform the check
-      timeout: 10s # Time to wait for the check to succeed
-      retries: 3 # Number of retries before marking as unhealthy
-      start_period: 120s # Time to wait before starting health checks
-    restart: always
-  db:
-    image: "mariadb:12"
-    container_name: db-${SERVICE}
-    volumes:
-      - ./${SERVICE}-data/mariadb:/var/lib/mysql
-      - type: bind
-        source: ./init.sql
-        target: /docker-entrypoint-initdb.d/init.sql
-    environment:
-      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MARIADB_USER=${DB_USER}
-      - MARIADB_PASSWORD=${DB_PASSWORD}
-      - MARIADB_DATABASE=${DB_DATABASE}
-    command:
-      - "--character-set-server=utf8mb4"
-      - "--collation-server=utf8mb4_bin"
-      - "--explicit-defaults-for-timestamp=1"
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"] # Check if MariaDB accepts TCP connections and InnoDB is initialized
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/heartbeat"] # Check if the service is responding
       interval: 1m # How often to perform the check
       timeout: 10s # Time to wait for the check to succeed
       retries: 3 # Number of retries before marking as unhealthy
       start_period: 30s # Time to wait before starting health checks
+    restart: always
+
+  # PostgreSQL database
+  database:
+    image: ${DB_IMAGE_URL}
+    container_name: db-${SERVICE}
+    environment: # Variables are declared in .env file.
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      # Point PGDATA to a subfolder inside the volume mount
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./${SERVICE}-data/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"] # Check if PostgreSQL accepts connections
+      interval: 5s # How often to perform the check
+      timeout: 3s # Time to wait for the check to succeed
+      retries: 10 # Number of retries before marking as unhealthy
+      start_period: 10s # Time to wait before starting health checks
     restart: always
