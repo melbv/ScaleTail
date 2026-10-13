@@ -8,8 +8,8 @@ configs:
       "AllowFunnel":{"$${TS_CERT_DOMAIN}:443":false}}
 
 services:
-# Make sure you have updated/checked the .env file with the correct variables.
-# All the ${ xx } need to be defined there.
+  # Make sure you have updated/checked the .env file with the correct variables.
+  # Every variable used in this file must be defined there, unless it has a default such as ${VAR:-value}.
   # Tailscale Sidecar Configuration
   tailscale:
     image: tailscale/tailscale:latest # Image to be used
@@ -35,7 +35,7 @@ services:
     cap_add:
       - net_admin # Tailscale requirement
     #ports:
-    #  - 0.0.0.0:${SERVICEPORT}:${SERVICEPORT} # Binding port ${SERVICE}PORT to the local network - may be removed if only exposure to your Tailnet is required
+    #  - 0.0.0.0:${SERVICEPORT}:${SERVICEPORT} # Binding port ${SERVICEPORT} to the local network - may be removed if only exposure to your Tailnet is required
     # If any DNS issues arise, use your preferred DNS provider by uncommenting the config below
     #dns:
     #  - ${DNS_SERVER}
@@ -50,14 +50,14 @@ services:
   # ${SERVICE}
   application:
     image: ${IMAGE_URL} # Image to be used
-    network_mode: service:tailscale # Sidecar configuration to route ${SERVICE} through Tailscale
+    network_mode: service:tailscale # Sidecar configuration to route the service through Tailscale
     container_name: app-${SERVICE} # Name for local container management
     environment: # Variables are declared in .env file.
       # Database connection
       - ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=MailArchiver;Username=${DB_USER};Password=${DB_PW};
       # First admin user
       - Authentication__Username=${APP_USER}
-      - Authentication__Password=${APP_PW}
+      - Authentication__Password=${APP_PW:?Set APP_PW in .env}
       # Time zone
       - TZ=${TZ}
       - TimeZone__DisplayTimeZoneId=${TZ} # Time zone used for dates in the web interface
@@ -95,7 +95,7 @@ services:
     environment:
       - POSTGRES_DB=MailArchiver
       - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PW}
+      - POSTGRES_PASSWORD=${DB_PW:?Set DB_PW in .env}
     volumes:
       - ./${SERVICE}-data/db:/var/lib/postgresql/data
     healthcheck:
@@ -105,3 +105,4 @@ services:
       retries: 5 # Number of retries before marking as unhealthy
       start_period: 30s # Time to wait before starting health checks
     restart: always
+    command: ["postgres", "-c", "listen_addresses=localhost"]
