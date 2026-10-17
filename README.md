@@ -107,7 +107,6 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 | **Traefik**                      | Reverse proxy and load balancer that routes requests to Docker containers by label.     | [Details](services/traefik)                      |
 | **Vaultwarden**                  | Password manager server that works with the Bitwarden apps and browser extensions.      | [Details](services/vaultwarden)                  |
 
-
 ### Media and entertainment
 
 | Service            | Description                                                                                          | Link                               |
