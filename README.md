@@ -22,6 +22,7 @@ ScaleTail is a collection of ready-to-run [Docker Compose](https://docs.docker.c
   - [Utilities](#utilities)
   - [Food and wellness](#food-and-wellness)
 - [Update a stack](#update-a-stack)
+- [Keep your changes out of the clone](#keep-your-changes-out-of-the-clone)
 - [Remove a stack](#remove-a-stack)
 - [Get help](#get-help)
 - [Tailscale Serve and Funnel](#tailscale-serve-and-funnel)
@@ -113,10 +114,12 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 | ------------------ | ---------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | **ArtistTrackarr** | Tracker for new and upcoming albums and EPs, using MusicBrainz and optionally Spotify.               | [Details](services/artisttrackarr) |
 | **Audiobookshelf** | Server for audiobooks and podcasts, with playback progress synced across devices.                    | [Details](services/audiobookshelf) |
+| **AudioMuse-AI**   | Tool that analyzes your music library and builds playlists for your media server.                    | [Details](services/audiomuse-ai)   |
 | **Bazarr**         | Subtitle downloader for movies and series managed by Radarr and Sonarr.                              | [Details](services/bazarr)         |
 | **BookLore**       | Book manager and browser reader, with Kobo and KOReader sync.                                        | [Details](services/booklore)       |
 | **Configarr**      | Tool that applies YAML settings and TRaSH Guides profiles to Radarr and Sonarr, then exits.          | [Details](services/configarr)      |
 | **FreshRSS**       | Feed reader for RSS and Atom, with themes, extensions, and no separate database server.              | [Details](services/freshrss)       |
+| **Fusion**         | Lightweight feed reader for RSS, Atom, and JSON feeds, with a Fever API for mobile clients.          | [Details](services/fusion)         |
 | **Hytale**         | Hytale game server in a community image, for players on your Tailnet.                                | [Details](services/hytale)         |
 | **Immich**         | Photo and video library that backs up mobile media, with search and sharing.                         | [Details](services/immich)         |
 | **Jellyfin**       | Media server that organizes and streams your movies, series, and music.                              | [Details](services/jellyfin)       |
@@ -135,6 +138,7 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 | **Seerr**          | Request manager for Plex, Jellyfin, and Emby that sends approved requests to Radarr and Sonarr.      | [Details](services/seerr)          |
 | **Slink**          | Image hosting platform that shares uploads through links.                                            | [Details](services/slink)          |
 | **Sonarr**         | Series manager that searches Usenet and BitTorrent for new episodes.                                 | [Details](services/sonarr)         |
+| **Storyteller**    | Platform for reading ebooks with synced audiobook narration.                                         | [Details](services/storyteller)    |
 | **Swing Music**    | Music player and streaming server for your local audio files.                                        | [Details](services/swingmx)        |
 | **Tautulli**       | Monitoring tool for Plex Media Server, with viewing history, statistics, and notifications.          | [Details](services/tautulli)       |
 
@@ -172,7 +176,10 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 | **Memos**         | Note-taking app for short Markdown notes, shown on a timeline.                             | [Details](services/memos)         |
 | **Nanote**        | Note-taking app that stores notes as Markdown files in folders.                            | [Details](services/nanote)        |
 | **NextExplorer**  | Web file manager for browsing, uploading, and editing files in one folder on your server.  | [Details](services/next-explorer) |
+| **Open Notebook** | Alternative to NotebookLM for chatting with your sources using AI.                         | [Details](services/open-notebook) |
 | **Open WebUI**    | Chat interface for AI models, through Ollama or OpenAI-compatible APIs.                    | [Details](services/open-webui)    |
+| **OpenClaw**      | Personal AI assistant that connects agents to your chat apps.                              | [Details](services/openclaw)      |
+| **OpenCloud**     | File sync and sharing platform with desktop and mobile clients.                            | [Details](services/opencloud)     |
 | **Paperless-ngx** | Document management system that turns scans and files into a searchable archive.           | [Details](services/paperless)     |
 | **Pingvin Share** | Archived. File sharing platform with links that can expire.                                | [Details](services/pingvin-share) |
 | **Radicale**      | CalDAV and CardDAV server that syncs calendars, to-do lists, and contacts.                 | [Details](services/radicale)      |
@@ -182,6 +189,7 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 | **SubTrackr**     | Subscription tracker that shows monthly and yearly costs and when each one renews.         | [Details](services/subtrackr)     |
 | **Sure**          | Fork of the archived Maybe finance app, for tracking accounts, investments, and net worth. | [Details](services/sure)          |
 | **Vikunja**       | To-do and project management app with lists, boards, Gantt charts, and reminders.          | [Details](services/vikunja)       |
+| **Wallabag**      | Read-it-later app that saves web pages as articles.                                        | [Details](services/wallabag)      |
 | **Wallos**        | Subscription and expense tracker with payment reminders and budget help.                   | [Details](services/wallos)        |
 | **XWiki**         | Wiki platform for documentation and knowledge management, with extensions.                 | [Details](services/xwiki)         |
 
@@ -242,6 +250,7 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 | **Gotify**     | Push notification server that shows messages from your scripts in its web interface and Android app. | [Details](services/gotify)      |
 | **Hemmelig**   | Archived. Encrypted secret sharing by link, with secrets deleted after reading or on expiry.         | [Details](services/hemmelig)    |
 | **Homebox**    | Home inventory for items, with location, quantity, warranty, and purchase details.                   | [Details](services/homebox)     |
+| **Kasm**       | Platform that streams desktops and apps to your browser, each in a container.                        | [Details](services/kasm)        |
 | **LubeLogger** | Tracker for vehicle maintenance and fuel use, with reminders for upcoming services.                  | [Details](services/lube-logger) |
 | **Mini QR**    | Web app to create, style, and scan QR codes.                                                         | [Details](services/miniqr)      |
 | **ntfy**       | Notification service that lets scripts and apps push messages to phones and browsers over HTTP.      | [Details](services/ntfy)        |
@@ -252,8 +261,10 @@ Every stack starts from the same [standard setup](documentation/standard-setup.m
 
 | Service             | Description                                                                         | Link                           |
 | ------------------- | ----------------------------------------------------------------------------------- | ------------------------------ |
+| **Clean Slate**     | Calorie tracker for food, recipes, and exercise.                                    | [Details](services/cleanslate) |
 | **KitchenOwl**      | Grocery list and recipe manager for households, with meal planning and expenses.    | [Details](services/kitchenowl) |
 | **Mealie**          | Recipe manager and meal planner with shopping lists and imports from web addresses. | [Details](services/mealie)     |
+| **openGym**         | Gym and body-weight tracker for routines and workouts.                              | [Details](services/opengym)    |
 | **Tandoor Recipes** | Recipe manager and meal planner with shopping lists.                                | [Details](services/tandoor)    |
 
 ## Update a stack
@@ -276,6 +287,47 @@ git stash pop
 If `git stash pop` reports a conflict in `.env`, open the file, keep your values, delete the `<<<<<<<`, `=======`, and `>>>>>>>` lines, then run `git reset` and `git stash drop`.
 
 Before you restart the stack, read the "Upgrading" section of the service README, if it has one.
+
+## Keep your changes out of the clone
+
+This section is optional. The steps in [Quick Start](#quick-start) work as they are. Use one of these options when you run several stacks, or when `git pull` or switching branches runs into your `.env` or into data that the containers wrote as root.
+
+### Run the stack from a copy
+
+Copy the service directory out of the clone, before the first start, and run the stack from the copy:
+
+```sh
+cp -R ScaleTail/services/<service> ~/stacks/<service>
+cd ~/stacks/<service>
+```
+
+Your `.env`, the Tailscale state, and the application data now live outside the clone, so `git pull` in the clone never conflicts with them. A copy no longer follows the repository, so to pick up changes, update the clone and compare the files:
+
+```sh
+git -C ScaleTail pull
+diff ScaleTail/services/<service>/compose.yaml ~/stacks/<service>/compose.yaml
+diff ScaleTail/services/<service>/.env ~/stacks/<service>/.env
+```
+
+The `.env` comparison also lists the values you set yourself. Look for variables that are new upstream, such as a new required secret, and add them to your copy.
+
+Read the "Upgrading" section of the service README before you apply a change.
+
+### Keep your changes in an override file
+
+To stay in the clone, put your changes to `compose.yaml` in a file named `compose.override.yaml` (singular) next to it. Compose reads both files without extra options, and `git pull` never touches an untracked file. Entries in `volumes` and `environment` replace the entry with the same container path or variable name, so an override can also move data out of the clone:
+
+```yaml
+services:
+  tailscale:
+    volumes:
+      - /srv/scaletail/<service>/ts/state:/var/lib/tailscale
+  application:
+    volumes:
+      - /srv/scaletail/<service>/data:/config
+```
+
+Use the container path from the `volumes` of the application in `compose.yaml`. Check the result with `docker compose config`. The override file does not cover `.env`, which is tracked, so keep using `git stash` for it, or run the stack from a copy.
 
 ## Remove a stack
 
